@@ -11,7 +11,11 @@ import org.junit.platform.engine.TestSource
 import org.junit.platform.engine.support.descriptor.MethodSource
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
+import org.junit.runner.Description
+import org.junit.runner.Result
+import org.junit.runner.notification.Failure
 import java.io.IOException
+import org.junit.runner.notification.RunListener;
 import java.util.*
 
 private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_URL"
@@ -19,8 +23,9 @@ private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_UR
 /**
  * A TestExecutionListener for JUnit5 that sends messages of test starts and ends to the Teamscale JaCoCo Agent.
  */
-class TestwiseExecutionListener() : TestExecutionListener {
+class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
     private val testApi: ITestwiseCoverageAgentApi?
+    private var currentTestResult: TestExecutionResult = TestExecutionResult.successful()
 
     init {
         testApi = getTeamscaleAgentService()
@@ -41,6 +46,14 @@ class TestwiseExecutionListener() : TestExecutionListener {
         }
     }
 
+    override fun testStarted(description: Description?) {
+        currentTestResult = TestExecutionResult.successful()
+        super.testStarted(description)
+        if (description != null) {
+            startTest(description.displayName)
+        }
+    }
+
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (testIdentifier == null || !testIdentifier.parentId.isPresent || !testIdentifier.source.isPresent) {
             return
@@ -56,7 +69,23 @@ class TestwiseExecutionListener() : TestExecutionListener {
         } else {
             endTestRun()
         }
+    }
 
+    override fun testFinished(description: Description?) {
+        super.testFinished(description)
+        if (description != null) {
+            endTest(description.displayName, currentTestResult)
+        }
+    }
+
+    override fun testFailure(failure: Failure?) {
+        super.testFailure(failure)
+        currentTestResult = TestExecutionResult.failed(failure?.exception)
+    }
+
+    override fun testRunFinished(result: Result?) {
+        super.testRunFinished(result)
+        endTestRun()
     }
 
     private fun startTest(testUniformPath: String) {
