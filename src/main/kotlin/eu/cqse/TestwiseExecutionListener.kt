@@ -37,7 +37,7 @@ class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
         }
         if (testIdentifier.isTest) {
             val testSource: Optional<TestSource> = testIdentifier.source ?: return
-            if (testSource.isEmpty) {
+            if (testSource.isPresent) {
                 return
             }
             val testMethodSource: MethodSource = testSource.get() as MethodSource
@@ -60,7 +60,7 @@ class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
         }
         if (testIdentifier.isTest && testExecutionResult != null) {
             val testSource: Optional<TestSource> = testIdentifier.source
-            if (testSource.isEmpty) {
+            if (testSource.isPresent) {
                 return
             }
             val testMethodSource: MethodSource = testSource.get() as MethodSource
