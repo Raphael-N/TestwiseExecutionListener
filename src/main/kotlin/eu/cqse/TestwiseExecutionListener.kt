@@ -15,7 +15,7 @@ import org.junit.runner.Description
 import org.junit.runner.Result
 import org.junit.runner.notification.Failure
 import java.io.IOException
-import org.junit.runner.notification.RunListener;
+import org.junit.runner.notification.RunListener
 import java.util.*
 
 private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_URL"
@@ -23,7 +23,7 @@ private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_UR
 /**
  * A TestExecutionListener for JUnit5 that sends messages of test starts and ends to the Teamscale JaCoCo Agent.
  */
-class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
+class TestwiseExecutionListener: TestExecutionListener, RunListener() {
     private val testApi: ITestwiseCoverageAgentApi?
     private var currentTestResult: TestExecutionResult = TestExecutionResult.successful()
 
@@ -37,7 +37,7 @@ class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
         }
         if (testIdentifier.isTest) {
             val testSource: Optional<TestSource> = testIdentifier.source ?: return
-            if (testSource.isPresent) {
+            if (!testSource.isPresent) {
                 return
             }
             val testMethodSource: MethodSource = testSource.get() as MethodSource
@@ -60,7 +60,7 @@ class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
         }
         if (testIdentifier.isTest && testExecutionResult != null) {
             val testSource: Optional<TestSource> = testIdentifier.source
-            if (testSource.isPresent) {
+            if (!testSource.isPresent) {
                 return
             }
             val testMethodSource: MethodSource = testSource.get() as MethodSource
@@ -115,7 +115,7 @@ class TestwiseExecutionListener() : TestExecutionListener, RunListener() {
             return
         }
         try {
-            testApi.testRunFinished().execute()
+            testApi.testRunFinished(false).execute()
         } catch (e: IOException) {
             println("Error contacting test wise coverage agent.")
         }
