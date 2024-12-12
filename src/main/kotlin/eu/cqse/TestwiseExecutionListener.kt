@@ -14,8 +14,9 @@ import org.junit.platform.launcher.TestIdentifier
 import org.junit.runner.Description
 import org.junit.runner.Result
 import org.junit.runner.notification.Failure
-import java.io.IOException
 import org.junit.runner.notification.RunListener
+import java.io.IOException
+import java.net.URLEncoder
 import java.util.*
 
 private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_URL"
@@ -23,7 +24,7 @@ private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_UR
 /**
  * A TestExecutionListener for JUnit5 that sends messages of test starts and ends to the Teamscale JaCoCo Agent.
  */
-class TestwiseExecutionListener: TestExecutionListener, RunListener() {
+class TestwiseExecutionListener : TestExecutionListener, RunListener() {
     private val testApi: ITestwiseCoverageAgentApi?
     private var currentTestResult: TestExecutionResult = TestExecutionResult.successful()
 
@@ -88,26 +89,34 @@ class TestwiseExecutionListener: TestExecutionListener, RunListener() {
         endTestRun()
     }
 
-    private fun startTest(testUniformPath: String) {
+    private fun startTest(testPath: String) {
         if (testApi == null) {
             return
         }
         try {
-            testApi.testStarted(testUniformPath).execute()
+            val encodedPath = preparePath(testPath)
+            testApi.testStarted(encodedPath).execute()
         } catch (e: IOException) {
-            println("Error while calling service api.")
+            println("Error while calling service api for test start.")
         }
     }
 
-    private fun endTest(testUniformPath: String,
+    private fun endTest(
+        testPath: String,
         testExecutionResult: TestExecutionResult
     ) {
-        RunningTest(testUniformPath, testApi).endTest(
+        RunningTest(testPath.replace('.', '/'), testApi).endTest(
             TestRun.TestResultWithMessage(
                 toTestExecutionResult(testExecutionResult.status),
                 null
             )
         )
+    }
+
+    private fun preparePath(testUniformPath: String): String? {
+        val testPath = testUniformPath.replace('.', '/')
+        val encodedPath = URLEncoder.encode(testPath, "UTF-8")
+        return encodedPath
     }
 
     private fun endTestRun() {
