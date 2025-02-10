@@ -8,6 +8,7 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.engine.TestSource
+import org.junit.platform.engine.support.descriptor.ClasspathResourceSource
 import org.junit.platform.engine.support.descriptor.MethodSource
 import org.junit.platform.launcher.TestExecutionListener
 import org.junit.platform.launcher.TestIdentifier
@@ -32,6 +33,9 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         testApi = getTeamscaleAgentService()
     }
 
+    /**
+     * JUnit 5 Test execution start
+     */
     override fun executionStarted(testIdentifier: TestIdentifier?) {
         if (testIdentifier == null) {
             return
@@ -41,12 +45,14 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
             if (!testSource.isPresent) {
                 return
             }
-            val testMethodSource: MethodSource = testSource.get() as MethodSource
-            val testPath = testMethodSource.className + "." + testIdentifier.legacyReportingName
+            val testPath = getTestPath(testSource, testIdentifier)
             startTest(testPath)
         }
     }
 
+    /**
+     * JUnit 4 Test execution started
+     */
     override fun testStarted(description: Description?) {
         currentTestResult = TestExecutionResult.successful()
         super.testStarted(description)
@@ -55,6 +61,9 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         }
     }
 
+    /**
+     * JUnit 5 Test execution finished
+     */
     override fun executionFinished(testIdentifier: TestIdentifier?, testExecutionResult: TestExecutionResult?) {
         if (testIdentifier == null || !testIdentifier.parentId.isPresent || !testIdentifier.source.isPresent) {
             return
@@ -64,14 +73,16 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
             if (!testSource.isPresent) {
                 return
             }
-            val testMethodSource: MethodSource = testSource.get() as MethodSource
-            val testPath = testMethodSource.className + "." + testIdentifier.legacyReportingName
+            val testPath = getTestPath(testSource, testIdentifier)
             endTest(testPath, testExecutionResult)
         } else {
             endTestRun()
         }
     }
 
+    /**
+     * JUnit 4 Test execution finished
+     */
     override fun testFinished(description: Description?) {
         super.testFinished(description)
         if (description != null) {
@@ -79,11 +90,39 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         }
     }
 
+    /**
+     * JUnit 4 Test failure event
+     */
     override fun testFailure(failure: Failure?) {
         super.testFailure(failure)
         currentTestResult = TestExecutionResult.failed(failure?.exception)
     }
 
+    private fun getTestPath(
+        testSource: Optional<TestSource>,
+        testIdentifier: TestIdentifier
+    ): String {
+        val testPath = when (val testMethodSource = testSource.get()) {
+            is MethodSource -> {
+                testMethodSource.className + "." + testIdentifier.legacyReportingName
+            }
+
+            is ClasspathResourceSource -> {
+                // Handle cucumber Tests
+                val file = testMethodSource.classpathResourceName
+                file.replace(".feature", "") + "/" + testIdentifier.legacyReportingName
+            }
+
+            else -> {
+                testMethodSource.toString()
+            }
+        }
+        return testPath
+    }
+
+    /**
+     * End of a test suite.
+     */
     override fun testRunFinished(result: Result?) {
         super.testRunFinished(result)
         endTestRun()
@@ -95,7 +134,9 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         }
         try {
             val encodedPath = preparePath(testPath)
-            testApi.testStarted(encodedPath).execute()
+            encodedPath?.let {
+                testApi.testStarted(it).execute()
+            }
         } catch (e: IOException) {
             println("Error while calling service api for test start.")
         }
@@ -105,12 +146,14 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         testPath: String,
         testExecutionResult: TestExecutionResult
     ) {
-        RunningTest(testPath.replace('.', '/'), testApi).endTest(
-            TestRun.TestResultWithMessage(
-                toTestExecutionResult(testExecutionResult.status),
-                null
+        testApi?.let {
+            RunningTest(testPath.replace('.', '/'), it).endTest(
+                TestRun.TestResultWithMessage(
+                    toTestExecutionResult(testExecutionResult.status),
+                    null
+                )
             )
-        )
+        }
     }
 
     private fun preparePath(testUniformPath: String): String? {
