@@ -31,7 +31,7 @@ implementation 'eu.cqse:TestwiseExecutionListener:1.0-SNAPSHOT'
 ```
 
 Finally, you need to tell the service loader to use the test listener.
-To Achieve this, put a file named ```org.junit.platform.launcher.TestExecutionListener``` in the resources folder of your project.
+To Achieve this, put a file named ```org.junit.platform.launcher.TestExecutionListener``` in the `resources/META-INF/services` folder of your project.
 The content of the file should be ```eu.cqse.TestwiseExecutionListener```.
 
 # Configuration

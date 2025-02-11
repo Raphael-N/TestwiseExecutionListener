@@ -6,7 +6,7 @@
 
     <artifactId>TestwiseExecutionListener</artifactId>
     <groupId>eu.cqse</groupId>
-    <version>1.3</version>
+    <version>1.4</version>
     <packaging>jar</packaging>
 
     <name>TestExecutionListener</name>
@@ -76,7 +76,7 @@
         <dependency>
             <groupId>com.teamscale</groupId>
             <artifactId>tia-client</artifactId>
-            <version>34.2.2</version>
+            <version>34.2.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

@@ -4,6 +4,7 @@ import com.teamscale.report.testwise.model.ETestExecutionResult
 import com.teamscale.tia.client.ITestwiseCoverageAgentApi
 import com.teamscale.tia.client.RunningTest
 import com.teamscale.tia.client.TestRun
+import com.teamscale.tia.client.UrlUtils
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.platform.engine.TestExecutionResult
@@ -17,7 +18,6 @@ import org.junit.runner.Result
 import org.junit.runner.notification.Failure
 import org.junit.runner.notification.RunListener
 import java.io.IOException
-import java.net.URLEncoder
 import java.util.*
 
 private const val TEAMSCALE_JACOCO_AGENT_URL_PROPERTY: String = "JACOCO_AGENT_URL"
@@ -134,9 +134,7 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         }
         try {
             val encodedPath = preparePath(testPath)
-            encodedPath?.let {
-                testApi.testStarted(it).execute()
-            }
+            testApi.testStarted(encodedPath).execute()
         } catch (e: IOException) {
             println("Error while calling service api for test start.")
         }
@@ -156,9 +154,9 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         }
     }
 
-    private fun preparePath(testUniformPath: String): String? {
+    private fun preparePath(testUniformPath: String): String {
         val testPath = testUniformPath.replace('.', '/')
-        val encodedPath = URLEncoder.encode(testPath, "UTF-8")
+        val encodedPath = UrlUtils.percentEncode(testPath)
         return encodedPath
     }
 
@@ -169,7 +167,7 @@ class TestwiseExecutionListener : TestExecutionListener, RunListener() {
         try {
             testApi.testRunFinished(false).execute()
         } catch (e: IOException) {
-            println("Error contacting test wise coverage agent.")
+            println("Error contacting testwise coverage agent.")
         }
     }
 
